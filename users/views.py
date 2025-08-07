@@ -46,7 +46,7 @@ class customTokenRefreshView(TokenRefreshView):
             res.set_cookie(
                 key="access_token",
                 value=access_token,
-                secure=False,
+                secure=True,
                 httponly=True,
                 samesite='None',
                 path='/',
