@@ -12,13 +12,20 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from core.utils.responses import success_response, error_response
 from .serializers.auth import LoginSerializer, RegisterSerializer, ChangePasswordSerializer
+from .serializers.serializers import UserSkillSerializer, UserAccountSerializer, QuizSerializer, QuestionSerializer, UserQuizResultSerializer, SkillSerializer
 from .tasks import send_verification_email, send_reset_password_request_email
-from .models import userAccount
+from .models import userAccount, UserSkill, Skill, Quiz, UserQuizResult, Question, UserAnswer
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
+from rest_framework.throttling import UserRateThrottle
+from rest_framework.decorators import throttle_classes
 # Create your views here.
+
+
+class FivePerMinuteThrottle(UserRateThrottle):
+    rate = '5/minute'
 
 class customTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
@@ -65,6 +72,7 @@ class customTokenRefreshView(TokenRefreshView):
 
 @api_view(["POST"])
 @authentication_classes([])
+@throttle_classes([FivePerMinuteThrottle])
 def login(request):
     serializer = LoginSerializer(data=request.data)
 
@@ -78,6 +86,16 @@ def login(request):
         user = get_user_model().objects.get(email=email)
     except get_user_model().DoesNotExist:
         return error_response("Email is not associated with any user", "Invalid user email")
+    
+    try:
+        profile = userAccount.objects.get(user=user)
+    except userAccount.DoesNotExist:    
+        return error_response("User profile not found", {"details": "No profile associated with this user"}, status.HTTP_404_NOT_FOUND) 
+       
+
+    if not profile.is_verified:
+        return error_response("Please verify your email", {"details": "Email hasn't been verified yet"}, status.HTTP_403_FORBIDDEN)
+
 
 
     if not check_password(password, user.password):
@@ -150,7 +168,6 @@ def register(request):
             return error_response("Username already in use.", {"details" : "Username conflict occured! it's already associated with another user"}, status.HTTP_409_CONFLICT)
             
 
-
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -158,6 +175,10 @@ def register(request):
             last_name=last_name,
             password=password
         )
+
+        user_account = userAccount.objects.create(user=user)
+        user_account.is_verified = False
+        user_account.save()
 
         send_verification_email.delay(user.id)
 
@@ -302,7 +323,6 @@ def reset_password_request(request):
         if new_password != new_password2:
            return error_response("New passwords do not match", {"details":"New Passwords mismatch"})
 
-
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
             user = User.objects.get(pk=uid)
@@ -325,8 +345,277 @@ def reset_password_request(request):
             return success_response("Password sucessfully updated")
 
         else:
-            return error_response("Invalid or expired token.", {"details":"Token or uid is invalid"})
+            return error_response("Invalid or expired token and uid.", {"details":"Token or uid is invalid"})
 
 
     except Exception as e:
         return error_response("An unexpected error occured", { "details": "Failed reseting user password"}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["POST"])
+@authentication_classes([])
+def verify_email(request):
+    uidb64 = request.data.get("uid")
+    token = request.data.get("token")
+
+    try:
+        if not uidb64 or not token:
+            return error_response("Invalid link.")
+
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            return error_response("Invalid user.", {"details":"User was not found"},status.HTTP_404_NOT_FOUND)
+
+
+        if default_token_generator.check_token(user, token):
+            user.profile.is_verified = True
+            user.profile.save()
+            return success_response("Email successfully verified.", { "verified": True})
+        
+        else:
+            return error_response("Invalid or expired token and uid.", {"details":"Token or uid is invalid"})
+
+
+    except Exception as e:
+        return error_response("An unexpected error occured", { "details": "Failed to verify email"}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def onboarding(request):
+    skills = request.data.get("skills")
+
+    if not skills:
+        return error_response("Skill is required", {"details": "Skills field is empty"})
+
+    if not isinstance(skills, list):
+        return error_response("Invalid data type", {"details": "Skills should be a list"})
+
+    try:
+        try:
+            user = userAccount.objects.get(user=request.user)
+        except userAccount.DoesNotExist:
+            return error_response("User not found", {"details": "User profile not created"}, status.HTTP_404_NOT_FOUND)
+
+        for skill_name in skills:
+            try:
+                skill = Skill.objects.get(name=skill_name)
+
+                if not UserSkill.objects.filter(user=user, skill=skill).exists():
+                    UserSkill.objects.create(user=user, skill=skill, status="not_started")
+            except Skill.DoesNotExist:
+                continue
+
+        user.is_onboarded = True
+        user.save()
+
+        return success_response("Onboarding completed", {"onboarded": True, "url": "/"}, status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user(request):
+    try:
+        try:
+            user = userAccount.objects.get(user=request.user)
+        except userAccount.DoesNotExist:
+            return error_response("User not found", {"details": "User profile not created"}, status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserAccountSerializer(user)
+
+        return success_response("retrieved", {"user": serializer.data})
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_skills(request):
+    try:
+        try:
+            user = userAccount.objects.get(user=request.user)
+        except userAccount.DoesNotExist:
+            return error_response("User not found", {"details": "User profile not created"}, status.HTTP_404_NOT_FOUND)
+        
+        user_skills = UserSkill.objects.filter(user=user)
+
+        serializer = UserSkillSerializer(user_skills, many=True)
+
+        return success_response("retrieved", {"skills": serializer.data})
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@permission_classes([])
+def get_all_questions(request):
+    try:
+
+        question = Question.objects.all()
+
+        question_serializer = QuestionSerializer(question, many=True)
+
+        return success_response("retrieved", {"question":question_serializer.data})
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_quiz(request):
+    try:
+        user = request.user
+        user_profile = user.profile.first() 
+
+        if not user_profile:
+            return error_response("User profile not found", status.HTTP_404_NOT_FOUND)
+
+        user_skills = UserSkill.objects.filter(user=user_profile, is_deleted=False).values_list("skill", flat=True)
+
+        quizzes = Quiz.objects.filter(skill__id__in=user_skills)
+
+        serializer = QuizSerializer(quizzes, many=True)
+
+        return success_response("retrieved user quizes", {"quizzes": serializer.data})
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def submit_quiz(request):
+    try:
+        data = request.data
+        quiz_id = data.get("quiz_id")
+        answers = data.get("answers", [])
+
+        if not quiz_id or not answers:
+            return error_response(
+                "quiz_id and answers are required", 
+                {"details": "Please provide both 'quiz_id' and a list of 'answers' in the request body. 'answers' should be a list of objects, each containing a 'question_id' and the selected 'option_id'."}, 
+                status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = userAccount.objects.get(user=request.user)
+        except userAccount.DoesNotExist:    
+            return error_response("User profile not found", status.HTTP_404_NOT_FOUND)
+
+
+        quiz = Quiz.objects.get(id=quiz_id)
+
+        if UserQuizResult.objects.filter(user=user, quiz=quiz).exists():
+            return error_response("You have already submitted this quiz.", {"details":"Each user can only attempt a quiz once."}, status.HTTP_400_BAD_REQUEST)
+
+        score = 0
+        wrong_answers = []
+
+        for ans in answers:
+            question_id = ans.get("question_id")
+            selected = ans.get("selected_option", "").upper()
+
+            if not question_id or selected not in ["A", "B", "C", "D"]:
+                continue
+
+            try:
+                question = Question.objects.get(id=question_id, quiz=quiz)
+            except Question.DoesNotExist:
+                continue
+
+            is_correct = (selected == question.correct_option)
+
+            user_answers = UserAnswer.objects.create(
+                user=user,
+                quiz=quiz,
+                question=question,
+            )
+
+            user_answers.selected_option = selected
+            user_answers.is_correct = is_correct
+            user_answers.save()
+
+            if is_correct:
+                score += 1
+
+
+            if not is_correct:
+                wrong_answers.append({
+                    "question_id": question.id,
+                    "selected_option": selected,
+                    "correct_option": question.correct_option
+                })    
+
+        UserQuizResult.objects.create(user=user, quiz=quiz, score=score)
+
+        return success_response(
+            "Quiz submitted successfully",
+            {"score": score, 
+             "total": len(answers),
+             "wrong_answers": wrong_answers
+            },
+            status.HTTP_200_OK
+        )
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_quiz_results(request):
+    try:
+
+        try:
+            user = userAccount.objects.get(user=request.user)
+        except userAccount.DoesNotExist:    
+            return error_response("User profile not found", status.HTTP_404_NOT_FOUND)
+
+
+        results = UserQuizResult.objects.filter(user=user).select_related("quiz")
+
+        results_serializer = UserQuizResultSerializer(results, many=True)
+
+        return success_response("retrieved", { "results":results_serializer.data })
+
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(["GET"])
+@permission_classes([])
+def all_skills(request):
+
+    try:
+
+        skills = Skill.objects.all()
+
+        skills_serializer = SkillSerializer(skills, many=True)
+
+        return success_response("retrieved skills", {"skills": skills_serializer.data})
+
+
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -10,10 +10,11 @@ class userAccount(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="profile")
     profile_image = models.FileField(upload_to="profileImages/", blank=True, null=True)
-    user_type = models.CharField(max_length=20, choices=user_type.choices, default=user_type.STUDENT)
+    usertype = models.CharField(max_length=20, choices=user_type.choices, default=user_type.STUDENT)
     job_title = models.CharField(max_length=50, null=True, blank=True)
     bio = models.TextField(max_length=100, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    is_onboarded = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -26,7 +27,6 @@ class userAccount(models.Model):
 class Skill(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
-    category = models.CharField(max_length=100, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -85,10 +85,10 @@ class Question(models.Model):
     option_c = models.CharField(max_length=255)
     option_d = models.CharField(max_length=255)
     correct_option = models.CharField(max_length=1, choices=[("A", "A"), ("B", "B"), ("C", "C"), ("D", "D")])
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return self.question_text
-
 
 
 class UserQuizResult(models.Model):
@@ -99,3 +99,20 @@ class UserQuizResult(models.Model):
 
     def __str__(self):
         return f"{self.user.user.username} - {self.quiz.title} - {self.score}"
+
+
+
+class UserAnswer(models.Model):
+    user = models.ForeignKey(userAccount, on_delete=models.CASCADE, related_name="user_answers")
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="user_answers")
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="user_answers")
+    selected_option = models.CharField(max_length=1, choices=[("A", "A"), ("B", "B"), ("C", "C"), ("D", "D")])
+    is_correct = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "question")
+
+    def __str__(self):
+        return f"{self.user} - Q{self.question.id}: {self.selected_option}"
+
