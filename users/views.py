@@ -72,7 +72,7 @@ class customTokenRefreshView(TokenRefreshView):
 
 @api_view(["POST"])
 @authentication_classes([])
-@throttle_classes([FivePerMinuteThrottle])
+# @throttle_classes([FivePerMinuteThrottle])
 def login(request):
     serializer = LoginSerializer(data=request.data)
 
