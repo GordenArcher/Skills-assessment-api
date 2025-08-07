@@ -67,6 +67,7 @@ CORS_EXPOSE_HEADERS = ['Set-Cookie']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://skill-assessment-am.vercel.app",
 ]
 
 CSRF_COOKIE_HTTPONLY = True
