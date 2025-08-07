@@ -110,8 +110,8 @@ def login(request):
 
     cookie_settings = {
         "path": "/",
-        "samesite": "Lax",
-        "secure": False,
+        "samesite": "None",
+        "secure": True,
         "httponly": True
     }
 
