@@ -93,8 +93,8 @@ def login(request):
         return error_response("User profile not found", {"details": "No profile associated with this user"}, status.HTTP_404_NOT_FOUND) 
        
 
-    if not profile.is_verified:
-        return error_response("Please verify your email", {"details": "Email hasn't been verified yet"}, status.HTTP_403_FORBIDDEN)
+    # if not profile.is_verified:
+    #     return error_response("Please verify your email", {"details": "Email hasn't been verified yet"}, status.HTTP_403_FORBIDDEN)
 
 
 
