@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-c8_!!7up&e0f8tu^#$x0bc5u(vp7a3b=zt)n3t(#yi@x9*f8+('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['skiilsassess.pythonanywhere.com']
 
@@ -63,10 +63,18 @@ REST_FRAMEWORK = {
 
 
 CORS_ALLOW_CREDENTIALS: True
+CORS_EXPOSE_HEADERS = ['Set-Cookie']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True  
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
