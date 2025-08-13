@@ -72,7 +72,7 @@ class customTokenRefreshView(TokenRefreshView):
 
 @api_view(["POST"])
 @authentication_classes([])
-# @throttle_classes([FivePerMinuteThrottle])
+@throttle_classes([FivePerMinuteThrottle])
 def login(request):
     serializer = LoginSerializer(data=request.data)
 
@@ -95,7 +95,6 @@ def login(request):
 
     # if not profile.is_verified:
     #     return error_response("Please verify your email", {"details": "Email hasn't been verified yet"}, status.HTTP_403_FORBIDDEN)
-
 
 
     if not check_password(password, user.password):
@@ -590,7 +589,6 @@ def get_user_quiz_results(request):
             user = userAccount.objects.get(user=request.user)
         except userAccount.DoesNotExist:    
             return error_response("User profile not found", status.HTTP_404_NOT_FOUND)
-
 
         results = UserQuizResult.objects.filter(user=user).select_related("quiz")
 

@@ -45,20 +45,31 @@ INSTALLED_APPS = [
 ]
 
 
+from django.utils.timezone import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+}
+
+
+
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'core.utils.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'users.authentications.CookieJWTAuthentication'
     ),
-    # 'DEFAULT_THROTTLE_CLASSES': [
-    #     'rest_framework.throttling.UserRateThrottle',
-    #     'rest_framework.throttling.AnonRateThrottle',
-    # ],
-    # 'DEFAULT_THROTTLE_RATES': {
-    #     'user': '100/day',
-    #     'anon': '10/hour',
-    # }
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '100/day',
+        'anon': '10/hour',
+    }
 }
 
 
@@ -102,13 +113,15 @@ CORS_ALLOW_HEADERS = (
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',             
+    'django.middleware.common.CommonMiddleware',          
+    'core.middleware.SilentRefreshJwtMiddleware',    
+    'django.middleware.csrf.CsrfViewMiddleware', 
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'core.urls'
 
@@ -189,11 +202,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR / 'media/')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PASSWORD_RESET_TIMEOUT = 60 * 15
 
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_ENABLE_UTC = True
-CELERY_TIMEZONE = "UTC"
+
+CELERY_BROKER_URL = "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667"
+CELERY_RESULT_BACKEND = "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667"
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
 
 
 from dotenv import load_dotenv
