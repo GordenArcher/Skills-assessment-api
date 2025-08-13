@@ -24,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-c8_!!7up&e0f8tu^#$x0bc5u(vp7a3b=zt)n3t(#yi@x9*f8+('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['skiilsassess.pythonanywhere.com', 'localhost']
+ALLOWED_HOSTS = ['skiilsassess.pythonanywhere.com']
 
 
 # Application definition
@@ -54,7 +54,6 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
 }
-
 
 
 REST_FRAMEWORK = {
@@ -114,7 +113,8 @@ CORS_ALLOW_HEADERS = (
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',             
+    'core.middleware.IsFromAllowedOrigin', 
+    'corsheaders.middleware.CorsMiddleware',               
     'django.middleware.common.CommonMiddleware',          
     'core.middleware.SilentRefreshJwtMiddleware',    
     'django.middleware.csrf.CsrfViewMiddleware', 
