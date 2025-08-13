@@ -203,17 +203,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PASSWORD_RESET_TIMEOUT = 60 * 15
 
 
-CELERY_BROKER_URL = (
-    "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O"
-    "@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667/0"
-    "?ssl_cert_reqs=CERT_NONE"
-)
+CELERY_BROKER_URL = "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667/0?ssl_cert_reqs=required"
+CELERY_RESULT_BACKEND = "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667/0?ssl_cert_reqs=required"
 
-CELERY_RESULT_BACKEND = (
-    "rediss://default:4j1Q9zEGUZyTJpLEw5XK26MmTDM0XX3O"
-    "@redis-19667.c74.us-east-1-4.ec2.redns.redis-cloud.com:19667/0"
-    "?ssl_cert_reqs=CERT_NONE"
-)
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
