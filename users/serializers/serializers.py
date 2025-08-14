@@ -61,11 +61,15 @@ class QuizSerializer(serializers.ModelSerializer):
 class UserQuizResultSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     quiz_description = serializers.CharField(source='quiz.description', read_only=True)
-    status = serializers.CharField(source='UserSkill.status', read_only=True)
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = UserQuizResult
         fields = ['id', 'user', 'quiz_title', 'status', 'quiz_description', 'score', 'completed_at']
+
+    def get_status(self, obj):
+        user_skill = obj.user.user_skills.filter(skill=obj.quiz.skill).first()
+        return user_skill.status if user_skill else None
 
 
 class UserAnswerSerializer(serializers.ModelSerializer):
