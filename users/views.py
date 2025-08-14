@@ -277,6 +277,7 @@ def change_password(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 def reset_password_request_email(request):
     email = request.data.get("email")
 
