@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'django_celery_results',
 ]
 
-
 from django.utils.timezone import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
