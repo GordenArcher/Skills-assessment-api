@@ -66,10 +66,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'user': '100/day',
-        'anon': '10/hour',
-    }
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'user': '100/day',
+    #     'anon': '10/hour',
+    # }
 }
 
 
@@ -113,7 +113,7 @@ CORS_ALLOW_HEADERS = (
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.IsFromAllowedOrigin', 
+    # 'core.middleware.IsFromAllowedOrigin', 
     'corsheaders.middleware.CorsMiddleware',               
     'django.middleware.common.CommonMiddleware',          
     'core.middleware.SilentRefreshJwtMiddleware',    

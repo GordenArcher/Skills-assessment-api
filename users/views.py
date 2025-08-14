@@ -72,7 +72,7 @@ class customTokenRefreshView(TokenRefreshView):
 
 @api_view(["POST"])
 @authentication_classes([])
-@throttle_classes([FivePerMinuteThrottle])
+# @throttle_classes([FivePerMinuteThrottle])
 def login(request):
     serializer = LoginSerializer(data=request.data)
 
@@ -397,17 +397,24 @@ def onboarding(request):
         return error_response("Invalid data type", {"details": "Skills should be a list"})
 
     try:
-        try:
-            user = userAccount.objects.get(user=request.user)
-        except userAccount.DoesNotExist:
-            return error_response("User not found", {"details": "User profile not created"}, status.HTTP_404_NOT_FOUND)
-
+        user = userAccount.objects.get(user=request.user)
+        
         for skill_name in skills:
             try:
                 skill = Skill.objects.get(name=skill_name)
-
-                if not UserSkill.objects.filter(user=user, skill=skill).exists():
-                    UserSkill.objects.create(user=user, skill=skill, status="not_started")
+                user_skill, created = UserSkill.objects.get_or_create(
+                    user=user,
+                    skill=skill,
+                    defaults={'status': 'not_started'}
+                )
+                
+                quizzes = Quiz.objects.filter(skill=skill)
+                for quiz in quizzes:
+                    UserQuizResult.objects.get_or_create(
+                        user=user,
+                        quiz=quiz
+                    )
+                        
             except Skill.DoesNotExist:
                 continue
 
@@ -416,9 +423,10 @@ def onboarding(request):
 
         return success_response("Onboarding completed", {"onboarded": True, "url": "/"}, status.HTTP_201_CREATED)
 
+    except userAccount.DoesNotExist:
+        return error_response("User not found", status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        return error_response(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -521,6 +529,7 @@ def submit_quiz(request):
 
 
         quiz = Quiz.objects.get(id=quiz_id)
+        user_skill = UserSkill.objects.get(user=user, skill=quiz.skill)
 
         if UserQuizResult.objects.filter(user=user, quiz=quiz).exists():
             return error_response("You have already submitted this quiz.", {"details":"Each user can only attempt a quiz once."}, status.HTTP_400_BAD_REQUEST)
@@ -554,6 +563,14 @@ def submit_quiz(request):
 
             if is_correct:
                 score += 1
+
+
+            passing_score = quiz.questions.count() * 0.8
+            if score >= passing_score:
+                user_skill.status = 'completed'
+            else:
+                user_skill.status = 'in_progress'
+            user_skill.save()    
 
 
             if not is_correct:

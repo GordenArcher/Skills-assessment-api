@@ -29,7 +29,6 @@ class SkillSerializer(serializers.ModelSerializer):
 
 
 class UserSkillSerializer(serializers.ModelSerializer):
-    # user = UserAccountSerializer(read_only=True)
     skill = SkillSerializer(read_only=True)
 
     class Meta:
@@ -62,10 +61,11 @@ class QuizSerializer(serializers.ModelSerializer):
 class UserQuizResultSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     quiz_description = serializers.CharField(source='quiz.description', read_only=True)
+    status = serializers.CharField(source='UserSkill.status', read_only=True)
 
     class Meta:
         model = UserQuizResult
-        fields = ['id', 'user', 'quiz_title', 'quiz_description', 'score', 'completed_at']
+        fields = ['id', 'user', 'quiz_title', 'status', 'quiz_description', 'score', 'completed_at']
 
 
 class UserAnswerSerializer(serializers.ModelSerializer):
