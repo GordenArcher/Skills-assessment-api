@@ -291,7 +291,7 @@ def reset_password_request_email(request):
             return error_response("Email does not exist", {"details":"Email entered is not associated with any user"}, status.HTTP_404_NOT_FOUND) 
         
 
-        send_reset_password_request_email.delay(user.id, email)
+        send_reset_password_request_email(user.id, email)
 
         return success_response("An email has been sent to you")
 

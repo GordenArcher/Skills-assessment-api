@@ -37,14 +37,14 @@ def send_verification_email(user_id):
 
 
 
-@shared_task
+# @shared_task
 def send_reset_password_request_email(user_id, email):
     User = get_user_model()
     user = User.objects.get(id=user_id)
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     
-    verification_link = f"http://localhost:5173/change-password/?uid={uid}&token={token}"
+    verification_link = f"https://skill-assessment-am.vercel.app/newPassword?uid={uid}&token={token}"
 
     html_content = render_to_string("Emails/ResetEmailRequest.html", {
         "verification_link": verification_link,
