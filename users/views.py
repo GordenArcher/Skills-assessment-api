@@ -97,6 +97,11 @@ def login(request):
     #     return error_response("Please verify your email", {"details": "Email hasn't been verified yet"}, status.HTTP_403_FORBIDDEN)
 
 
+    if profile.is_onboarded == True:
+        url = '/'
+    else:
+        url = '/onboarding'    
+
     if not check_password(password, user.password):
         return error_response("Invalid credentials", { "detail": "Invalid email or password" }, status.HTTP_401_UNAUTHORIZED)
 
@@ -105,7 +110,7 @@ def login(request):
     refresh = RefreshToken.for_user(user)
     access_token = str(refresh.access_token)
 
-    response = success_response("Login successful", { "access_token": access_token, "auth": True})
+    response = success_response("Login successful", { "access_token": access_token, "auth": True, "onboarded":url})
 
     cookie_settings = {
         "path": "/",
@@ -407,15 +412,18 @@ def onboarding(request):
                 user_skill, created = UserSkill.objects.get_or_create(
                     user=user,
                     skill=skill,
-                    defaults={'status': 'not_started'}
+                    status="not_started"
                 )
                 
                 quizzes = Quiz.objects.filter(skill=skill)
                 for quiz in quizzes:
                     UserQuizResult.objects.get_or_create(
                         user=user,
-                        quiz=quiz
+                        quiz=quiz,
+                        defaults={"score": 0}
                     )
+
+                    
                         
             except Skill.DoesNotExist:
                 continue

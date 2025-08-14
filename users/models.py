@@ -94,7 +94,7 @@ class Question(models.Model):
 class UserQuizResult(models.Model):
     user = models.ForeignKey(userAccount, on_delete=models.CASCADE, related_name="quiz_results")
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="results")
-    score = models.PositiveIntegerField()
+    score = models.PositiveIntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

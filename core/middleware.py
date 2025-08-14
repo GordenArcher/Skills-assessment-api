@@ -103,8 +103,6 @@ class SilentRefreshJwtMiddleware(MiddlewareMixin):
         return response
 
 
-
-
 ALLOWED_ORIGINS = [
     "https://skill-assessment-am.vercel.app",
     "http://localhost:5173",
