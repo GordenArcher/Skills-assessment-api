@@ -19,4 +19,5 @@ urlpatterns = [
     path("all_questions/", views.get_all_questions),
     path("submit-quiz/", views.submit_quiz),
     path("get_user_quiz_results/", views.get_user_quiz_results),
+    path("get_quiz/", views.get_quiz),
 ]

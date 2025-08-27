@@ -537,11 +537,14 @@ def submit_quiz(request):
         except userAccount.DoesNotExist:    
             return error_response("User profile not found", status.HTTP_404_NOT_FOUND)
 
-
-        quiz = Quiz.objects.get(id=quiz_id)
+        try:
+            quiz = Quiz.objects.get(id=quiz_id)
+        except Quiz.DoesNotExist:
+            return error_response(f"{quiz_id} is not associated with any Quiz", {"detail":""}, status.HTTP_404_NOT_FOUND)
+        
         user_skill = UserSkill.objects.get(user=user, skill=quiz.skill)
 
-        if UserQuizResult.objects.filter(user=user, quiz=quiz).exists():
+        if UserAnswer.objects.filter(user=user, quiz=quiz).exists():
             return error_response("You have already submitted this quiz.", {"details":"Each user can only attempt a quiz once."}, status.HTTP_400_BAD_REQUEST)
 
         score = 0
@@ -574,13 +577,8 @@ def submit_quiz(request):
             if is_correct:
                 score += 1
 
-
-            passing_score = quiz.questions.count() * 0.8
-            if score >= passing_score:
-                user_skill.status = 'completed'
-            else:
-                user_skill.status = 'in_progress'
-            user_skill.save()    
+            user_skill.status = 'completed'
+            user_skill.save()
 
 
             if not is_correct:
@@ -590,7 +588,10 @@ def submit_quiz(request):
                     "correct_option": question.correct_option
                 })    
 
-        UserQuizResult.objects.create(user=user, quiz=quiz, score=score)
+        user_quiz = UserQuizResult.objects.get(user=user, quiz=quiz)
+
+        user_quiz.score=score
+        user_quiz.save()
 
         return success_response(
             "Quiz submitted successfully",
@@ -642,5 +643,36 @@ def all_skills(request):
         return success_response("retrieved skills", {"skills": skills_serializer.data})
 
 
+    except Exception as e:
+        return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_quiz(request):
+    quiz_title = request.data.get("quiz")
+
+    try:
+
+        if not quiz_title:
+            return error_response("Quiz title is required", {"detail":"Skill title was not provided"})
+
+        # try:
+        #     skill = Skill.objects.get(name=skill_title)
+        # except Skill.DoesNotExist:
+        #     return error_response(f"skill name was not found", {"detail":"skill name is not associated with any Skill"}, status.HTTP_404_NOT_FOUND)
+
+        try:
+            quiz = Quiz.objects.get(title=quiz_title)
+        except Quiz.DoesNotExist:
+            return error_response("Quiz not found", {"detail":"skill is not associated with any Quiz"})
+        
+        quiz_serializer = QuizSerializer(quiz)
+
+        return success_response("retrieved", {"quiz":quiz_serializer.data})
+        
     except Exception as e:
         return error_response("Unexpected error", {"details": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)
