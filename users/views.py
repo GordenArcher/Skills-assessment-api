@@ -650,7 +650,7 @@ def all_skills(request):
 
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def get_quiz(request):
     quiz_title = request.data.get("quiz")
